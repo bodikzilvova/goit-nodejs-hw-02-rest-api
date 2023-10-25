@@ -1,14 +1,14 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const { User } = require("../../models/user");
-const { schemas } = require("../../models/user");
-const { HttpError } = require("../../helpers");
+const { User } = require("../../../models/user");
+const { schemas } = require("../../../models/user");
+const { HttpError } = require("../../../helpers");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = process.env;
-const { authenticate } = require("../../middlewares");
+const { authenticate } = require("../../../middlewares");
 
-router.post("/register", async (req, res, next) => {
+router.post("/users/register", async (req, res, next) => {
   try {
     const { error } = schemas.registerAndLoginSchema.validate(req.body);
     if (error) {
@@ -29,7 +29,7 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+router.post("/users/login", async (req, res, next) => {
   try {
     const { error } = schemas.registerAndLoginSchema.validate(req.body);
     if (error) {
@@ -59,7 +59,7 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-router.get("/current", authenticate, async (req, res, next) => {
+router.get("/users/current", authenticate, async (req, res, next) => {
   try {
     const { email } = req.user;
     res.json({
@@ -70,7 +70,7 @@ router.get("/current", authenticate, async (req, res, next) => {
   }
 });
 
-router.post("/logout", authenticate, async (req, res, next) => {
+router.post("/users/logout", authenticate, async (req, res, next) => {
   try {
     const { _id } = req.user;
     await User.findByIdAndUpdate(_id, { token: "" });
