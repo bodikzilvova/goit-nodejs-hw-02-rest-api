@@ -6,7 +6,12 @@ const { HttpError } = require("../../../helpers");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = process.env;
-const { authenticate } = require("../../../middlewares");
+const { authenticate, upload } = require("../../../middlewares");
+const gravatar = require("gravatar");
+const path = require("path");
+const avatarsDir = path.join(__dirname, "../../../", "public", "avatars");
+const fs = require("fs/promises");
+const { resizeAndSaveAvatar } = require("../../../helpers/jimp");
 
 router.post("/users/register", async (req, res, next) => {
   try {
@@ -20,7 +25,12 @@ router.post("/users/register", async (req, res, next) => {
       throw HttpError(409, "Email is already in use");
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ ...req.body, password: hashPassword });
+    const avatarURL = gravatar.url(email);
+    const newUser = await User.create({
+      ...req.body,
+      password: hashPassword,
+      avatarURL,
+    });
     res.status(201).json({
       email: newUser,
     });
@@ -82,5 +92,30 @@ router.post("/users/logout", authenticate, async (req, res, next) => {
     next(error);
   }
 });
+
+router.patch(
+  "/users/avatars",
+  authenticate,
+  upload.single("avatar"),
+  async (req, res, next) => {
+    try {
+      const { _id } = req.user;
+      const { path: tempUpload, originalname } = req.file;
+      const filename = `${_id}_${originalname}`;
+      const resultUpload = path.join(avatarsDir, filename);
+      await resizeAndSaveAvatar(tempUpload, resultUpload);
+      await fs.rename(tempUpload, resultUpload);
+      const avatarURL = path.join("avatars", filename);
+    
+      await User.findByIdAndUpdate(_id, { avatarURL });
+
+      res.json({
+        avatarURL,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 module.exports = router;
